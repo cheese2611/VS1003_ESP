@@ -60,16 +60,6 @@ protected:
   {
     digitalWrite(dcs_pin,HIGH);
   }
-  inline void save_our_spi(void)
-  {
-    my_SPSR = SPSR;
-    my_SPCR = SPCR;
-  }
-  inline void set_our_spi(void)
-  {
-    SPSR = my_SPSR;
-    SPCR = my_SPCR;
-  }
   uint16_t read_register(uint8_t _reg) const;
   void write_register(uint8_t _reg,uint16_t _value) const;
   void sdi_send_buffer(const uint8_t* data,size_t len);

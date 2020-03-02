@@ -110,31 +110,6 @@ static PGM_P register_names[] PROGMEM =
 
 /****************************************************************************/
 
-/**
- * Spi saver
- *
- * Easy way to pop the SPI config registers onto the stack and pop
- * them off again
- */
-struct spi_saver_t
-{
-  uint8_t saved_SPCR;
-  uint8_t saved_SPSR;
-
-  spi_saver_t(void)
-  {
-    saved_SPCR = SPCR;
-    saved_SPSR = SPSR;
-  }
-  ~spi_saver_t()
-  {
-    SPCR = saved_SPCR;
-    SPSR = saved_SPSR;
-  }
-};
-
-/****************************************************************************/
-
 uint16_t VS1003::read_register(uint8_t _reg) const
 {
   uint16_t result;
@@ -175,7 +150,7 @@ void VS1003::sdi_send_buffer(const uint8_t* data, size_t len)
     await_data_request();
     delayMicroseconds(3);
 
-    size_t chunk_length = min(len,vs1003_chunk_size);
+    size_t chunk_length = min((uint8_t)len,vs1003_chunk_size);
     len -= chunk_length;
     while ( chunk_length-- )
       SPI.transfer(*data++);
@@ -192,7 +167,7 @@ void VS1003::sdi_send_zeroes(size_t len)
   {
     await_data_request();
 
-    size_t chunk_length = min(len,vs1003_chunk_size);
+    size_t chunk_length = min((uint8_t)len,vs1003_chunk_size);
     len -= chunk_length;
     while ( chunk_length-- )
       SPI.transfer(0);
@@ -211,8 +186,6 @@ VS1003::VS1003( uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin, uint8_t _r
 
 void VS1003::begin(void)
 {
-  spi_saver_t spi_saver;
-
   // Keep the chip in reset until we are ready
   pinMode(reset_pin,OUTPUT);
   digitalWrite(reset_pin,LOW);
@@ -268,9 +241,6 @@ void VS1003::begin(void)
   printf_P(PSTR("VS1003 Set\r\n"));
   printDetails();
   printf_P(PSTR("VS1003 OK\r\n"));
-
-  // Having set up our SPI state just the way we like it, save it for next time
-  save_our_spi();
 }
 
 /****************************************************************************/
@@ -288,8 +258,6 @@ void VS1003::setVolume(uint8_t vol) const
 
 void VS1003::startSong(void)
 {
-  spi_saver_t spi_saver;
-  set_our_spi();
   sdi_send_zeroes(10);
 }
 
@@ -297,8 +265,6 @@ void VS1003::startSong(void)
 
 void VS1003::playChunk(const uint8_t* data, size_t len)
 {
-  spi_saver_t spi_saver;
-  set_our_spi();
   sdi_send_buffer(data,len);
 }
 
@@ -306,8 +272,6 @@ void VS1003::playChunk(const uint8_t* data, size_t len)
 
 void VS1003::stopSong(void)
 {
-  spi_saver_t spi_saver;
-  set_our_spi();
   sdi_send_zeroes(2048);
 }
 
@@ -324,7 +288,6 @@ void VS1003::print_byte_register(uint8_t reg) const
 
 void VS1003::printDetails(void) const
 {
-  spi_saver_t spi_saver;
   printf_P(PSTR("VS1003 Configuration:\r\n"));
   int i = 0;
   while ( i <= SCI_num_registers )
